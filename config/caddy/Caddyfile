@@ -1,0 +1,51 @@
+{
+	email {$OBOX_ACME_EMAIL:admin@example.com}
+}
+
+{$OBOX_DOMAIN:localhost} {
+		# Open WebUI — primary chat interface
+		handle / {
+			reverse_proxy open-webui:8080
+		}
+
+		# LiteLLM — OpenAI-compatible API
+		handle /v1/* {
+			reverse_proxy litellm:4000
+		}
+
+		handle /litellm/* {
+			uri strip_prefix /litellm
+			reverse_proxy litellm:4000
+		}
+
+		# Portainer — container management (restrict in production)
+		handle /portainer/* {
+			uri strip_prefix /portainer
+			reverse_proxy portainer:9000
+		}
+
+		# Health check endpoint
+		handle /health {
+			respond "obox ok" 200
+		}
+}
+
+# Local development — no TLS, direct routing
+:80 {
+	handle / {
+		reverse_proxy open-webui:8080
+	}
+
+	handle /v1/* {
+		reverse_proxy litellm:4000
+	}
+
+	handle /portainer/* {
+		uri strip_prefix /portainer
+		reverse_proxy portainer:9000
+	}
+
+	handle /health {
+		respond "obox ok" 200
+	}
+}
