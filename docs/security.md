@@ -60,6 +60,8 @@ handle /portainer/* {
 }
 ```
 
+Apply the same pattern to `/grafana` — it exposes infrastructure metrics and should not be public without strong authentication.
+
 ### VPN Access
 
 For maximum security, do not expose obox publicly. Instead:
@@ -149,12 +151,15 @@ docker compose logs litellm | grep -i "error\|unauthorized"
 
 ### Resource Monitoring
 
-Use Portainer's built-in stats or add Prometheus/Grafana for:
+Use Grafana (`/grafana`) or Portainer's built-in stats for:
 
 - CPU and memory usage per container
-- GPU utilization
-- API request rates
+- GPU utilization (with GPU mode enabled)
+- API request rates via LiteLLM `/metrics`
+- Service uptime via blackbox HTTP probes
 - Disk usage (model weights grow over time)
+
+See [monitoring.md](monitoring.md) for dashboards, alerts, and PromQL queries.
 
 ## Incident Response
 
@@ -176,6 +181,8 @@ Before going to production:
 - [ ] DNS and TLS working
 - [ ] Firewall allows only 80, 443, and SSH
 - [ ] Portainer access restricted or VPN-only
+- [ ] Grafana admin password set (not default)
+- [ ] `GRAFANA_ROOT_URL` matches production URL
 - [ ] Image versions pinned
 - [ ] Backups configured for `webui_data` and `ollama_data` volumes
 - [ ] Monitoring in place

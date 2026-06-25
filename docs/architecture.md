@@ -28,6 +28,27 @@ A web UI for managing Docker containers, images, volumes, and networks. Useful f
 
 On first visit, you create an admin account. In production, restrict access to `/portainer` via firewall rules or Caddy authentication.
 
+### Prometheus
+
+Metrics collection engine. Scrapes exporters every 15 seconds and stores time-series data with 30-day retention. Runs on the internal network only — not exposed through Caddy.
+
+**Data:** Metrics persist in the `prometheus_data` volume.
+
+### Grafana
+
+Visualization layer for Prometheus metrics. Ships with a pre-provisioned **obox Overview** dashboard covering host resources, container usage, service health, and GPU metrics.
+
+**Data:** Dashboard customizations and settings persist in the `grafana_data` volume.
+
+### Exporters
+
+| Exporter | Metrics |
+|----------|---------|
+| node-exporter | Host CPU, memory, disk, network |
+| cAdvisor | Per-container CPU, memory, I/O |
+| blackbox-exporter | HTTP uptime and latency probes |
+| dcgm-exporter | NVIDIA GPU utilization and memory (GPU mode) |
+
 ### Caddy
 
 Reverse proxy and TLS terminator. In production with a real domain, Caddy automatically provisions Let's Encrypt certificates. Routes:
@@ -37,6 +58,7 @@ Reverse proxy and TLS terminator. In production with a real domain, Caddy automa
 | `/` | Open WebUI :8080 | Chat interface |
 | `/v1/*` | LiteLLM :4000 | OpenAI-compatible API |
 | `/portainer/*` | Portainer :9000 | Container management |
+| `/grafana/*` | Grafana :3000 | Monitoring dashboards |
 | `/health` | Caddy (static) | Health check |
 
 ## Network
@@ -56,10 +78,21 @@ Internet / Client
    ▼          ▼          ▼          ▼
 WebUI     LiteLLM   Portainer    Ollama
 :8080      :4000      :9000     :11434
-   │          │
-   └────┬─────┘
-        ▼
-     Ollama
+   │          │                    ▲
+   └────┬─────┘                    │
+        ▼                          │
+     Ollama ───────────────────────┘
+
+   Monitoring (internal network)
+   ┌──────────────────────────────────┐
+   │ Prometheus ◄── node-exporter     │
+   │     ▲      ◄── cAdvisor          │
+   │     │      ◄── blackbox-exporter │
+   │     │      ◄── litellm /metrics  │
+   │     │      ◄── dcgm-exporter     │
+   │     ▼                            │
+   │  Grafana ──► /grafana (via Caddy)│
+   └──────────────────────────────────┘
 ```
 
 ## Data Persistence
@@ -69,6 +102,8 @@ WebUI     LiteLLM   Portainer    Ollama
 | `ollama_data` | Downloaded model weights |
 | `webui_data` | Chat history, user data, uploads |
 | `portainer_data` | Portainer settings and state |
+| `prometheus_data` | Collected metrics (30-day retention) |
+| `grafana_data` | Dashboards and Grafana settings |
 | `caddy_data` | TLS certificates |
 | `caddy_config` | Caddy runtime config |
 

@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: obox
+    orgId: 1
+    folder: obox
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

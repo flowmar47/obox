@@ -53,6 +53,10 @@ check_container "obox-ollama"
 check_container "obox-webui"
 check_container "obox-litellm"
 check_container "obox-portainer"
+check_container "obox-prometheus"
+check_container "obox-grafana"
+check_container "obox-cadvisor"
+check_container "obox-node-exporter"
 
 echo ""
 echo "Endpoints:"
@@ -61,6 +65,8 @@ if [[ "${OBOX_DEV:-false}" == "true" ]]; then
   check_endpoint "http://localhost:3000/health" "Open WebUI"
   check_endpoint "http://localhost:4000/health/liveliness" "LiteLLM"
   check_endpoint "http://localhost:9000/api/status" "Portainer"
+  check_endpoint "http://localhost:3001/api/health" "Grafana"
+  check_endpoint "http://localhost:9090/-/healthy" "Prometheus"
   check_endpoint "http://localhost:11434" "Ollama"
 else
   if [[ -f .env ]]; then
@@ -69,6 +75,7 @@ else
   fi
   DOMAIN="${OBOX_DOMAIN:-localhost}"
   check_endpoint "http://${DOMAIN}/health" "Caddy proxy"
+  check_endpoint "http://${DOMAIN}/grafana/api/health" "Grafana"
   check_endpoint "http://${DOMAIN}/v1/models" "LiteLLM API" || true
 fi
 

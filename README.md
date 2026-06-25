@@ -3,18 +3,18 @@
 **Remote LLM server** — self-hosted AI inference with a web UI, OpenAI-compatible API, and Docker management via Portainer.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Caddy (TLS)                          │
-│              your-domain.com / localhost                     │
-├──────────┬──────────────┬──────────────┬────────────────────┤
-│ Open     │  LiteLLM     │  Portainer   │  /health           │
-│ WebUI    │  /v1/*       │  /portainer  │                    │
-│    │     │      │       │              │                    │
-│    └─────┼──────┘       │              │                    │
-│          ▼              │              │                    │
-│       Ollama ◄──────────┘              │                    │
-│    (LLM runtime)                        │                    │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                         Caddy (TLS)                              │
+│               your-domain.com / localhost                         │
+├──────────┬──────────┬──────────────┬──────────────┬────────────────┤
+│ Open     │ LiteLLM  │  Portainer   │  Grafana     │  /health       │
+│ WebUI    │  /v1/*   │  /portainer  │  /grafana    │                │
+│    │     │    │     │              │      │       │                │
+│    └─────┼────┘     │              │      ▼       │                │
+│          ▼          │              │  Prometheus ◄┼── node-exporter│
+│       Ollama ◄──────┘              │      ▲       │    cAdvisor    │
+│    (LLM runtime)                   │      └───────┼── blackbox     │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ## Features
@@ -24,6 +24,7 @@
 - **LiteLLM** — OpenAI-compatible API gateway for programmatic access
 - **Portainer** — web-based Docker container management
 - **Caddy** — automatic HTTPS with Let's Encrypt (production) or plain HTTP (local dev)
+- **Prometheus + Grafana** — host, container, and service monitoring with pre-built dashboards
 
 ## Quick Start
 
@@ -61,6 +62,8 @@ OBOX_DEV=true ./scripts/setup.sh
 | Open WebUI  | http://localhost:3000        |
 | LiteLLM API | http://localhost:4000/v1     |
 | Portainer   | http://localhost:9000        |
+| Grafana     | http://localhost:3001        |
+| Prometheus  | http://localhost:9090        |
 | Ollama      | http://localhost:11434       |
 
 ### Production
@@ -130,7 +133,28 @@ Enable NVIDIA GPU acceleration:
 OBOX_GPU=true ./scripts/setup.sh
 ```
 
-Requires the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) installed on the host.
+Requires the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) installed on the host. GPU metrics appear automatically in Grafana when GPU mode is enabled.
+
+## Monitoring
+
+Grafana dashboards are available at `/grafana` with a pre-built **obox Overview** dashboard covering:
+
+- Service health and HTTP probe latency
+- Host CPU, memory, disk, and network
+- Per-container resource usage for all obox services
+- NVIDIA GPU utilization and memory (GPU mode)
+
+```bash
+# Production
+https://your-domain.com/grafana
+
+# Development
+http://localhost:3001
+```
+
+Login with `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` from `.env`. Prometheus runs internally and is not exposed publicly.
+
+See [Monitoring Guide](docs/monitoring.md) for dashboards, alerts, and troubleshooting.
 
 ## Operations
 
@@ -161,6 +185,8 @@ All configuration is via `.env`. See [`.env.example`](.env.example) for the full
 | `LITELLM_MASTER_KEY` | API authentication key | auto-generated |
 | `OLLAMA_MODELS` | Models to pull on setup | `llama3.2:3b,phi3:mini` |
 | `OLLAMA_GPU_ENABLED` | Enable GPU (use with `OBOX_GPU=true`) | `false` |
+| `GRAFANA_ADMIN_PASSWORD` | Grafana admin password | — |
+| `GRAFANA_ROOT_URL` | Grafana public URL | `http://localhost/grafana/` |
 
 ## Project Structure
 
@@ -172,7 +198,9 @@ obox/
 ├── .env.example                # Environment template
 ├── config/
 │   ├── caddy/Caddyfile         # Reverse proxy routing
-│   └── litellm/config.yaml     # API gateway model routing
+│   ├── litellm/config.yaml     # API gateway model routing
+│   ├── prometheus/             # Metrics scrape config
+│   └── grafana/                # Dashboards and provisioning
 ├── scripts/
 │   ├── setup.sh                # One-command setup
 │   ├── healthcheck.sh          # Service health verification
@@ -180,6 +208,7 @@ obox/
 │   └── stop.sh                 # Graceful shutdown
 └── docs/
     ├── architecture.md         # System design
+    ├── monitoring.md           # Prometheus/Grafana guide
     ├── setup.md                # Detailed setup guide
     └── security.md             # Security hardening
 ```
@@ -187,6 +216,7 @@ obox/
 ## Documentation
 
 - [Architecture](docs/architecture.md) — system design and component interactions
+- [Monitoring](docs/monitoring.md) — Prometheus/Grafana dashboards and alerts
 - [Setup Guide](docs/setup.md) — detailed installation and configuration
 - [Security](docs/security.md) — hardening for production deployments
 

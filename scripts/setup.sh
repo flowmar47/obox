@@ -127,6 +127,8 @@ main() {
     echo "  Open WebUI:  http://localhost:3000"
     echo "  LiteLLM API: http://localhost:4000/v1"
     echo "  Portainer:   http://localhost:9000"
+    echo "  Grafana:     http://localhost:3001 (admin / see .env)"
+    echo "  Prometheus:  http://localhost:9090"
     echo "  Ollama:      http://localhost:11434"
   else
   # shellcheck disable=SC1091
@@ -135,6 +137,7 @@ main() {
     echo "  Open WebUI:  http://${DOMAIN}"
     echo "  LiteLLM API: http://${DOMAIN}/v1"
     echo "  Portainer:   http://${DOMAIN}/portainer"
+    echo "  Grafana:     http://${DOMAIN}/grafana"
     echo "  Health:      http://${DOMAIN}/health"
   fi
   echo ""

@@ -23,3 +23,14 @@ services:
   ollama:
     ports:
       - "11434:11434"
+
+  grafana:
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SERVER_ROOT_URL: "http://localhost:3001/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "false"
+
+  prometheus:
+    ports:
+      - "9090:9090"
