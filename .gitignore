@@ -1,0 +1,27 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Secrets and certificates
+config/caddy/certs/
+*.pem
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs and runtime data
+logs/
+data/
+*.log
+
+# Docker overrides (local only)
+docker-compose.override.yml

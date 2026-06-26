@@ -1,0 +1,36 @@
+# LiteLLM configuration — routes OpenAI-compatible API calls to Ollama
+# Docs: https://docs.litellm.ai/docs/proxy/configs
+
+model_list:
+  - model_name: llama3.2
+    litellm_params:
+      model: ollama/llama3.2:3b
+      api_base: os.environ/OLLAMA_API_BASE
+
+  - model_name: phi3
+    litellm_params:
+      model: ollama/phi3:mini
+      api_base: os.environ/OLLAMA_API_BASE
+
+  - model_name: mistral
+    litellm_params:
+      model: ollama/mistral:7b
+      api_base: os.environ/OLLAMA_API_BASE
+
+  - model_name: codellama
+    litellm_params:
+      model: ollama/codellama:7b
+      api_base: os.environ/OLLAMA_API_BASE
+
+  # Catch-all: pass any model name directly to Ollama
+  - model_name: "*"
+    litellm_params:
+      model: ollama/*
+      api_base: os.environ/OLLAMA_API_BASE
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+
+litellm_settings:
+  drop_params: true
+  set_verbose: false
