@@ -20,7 +20,7 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     environment:
-      OBOX_DOMAIN: ${OBOX_DOMAIN:-localhost}
+      OBOX_DOMAIN: ${OBOX_DOMAIN:-http://localhost}
       OBOX_ACME_EMAIL: ${OBOX_ACME_EMAIL:-admin@example.com}
     networks:
       - obox
@@ -137,6 +137,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -168,7 +169,7 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost/grafana/}
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
-      GF_SERVER_DOMAIN: ${OBOX_DOMAIN:-localhost}
+      GF_SERVER_DOMAIN: ${GRAFANA_DOMAIN:-localhost}
     networks:
       - obox
     depends_on:

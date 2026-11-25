@@ -30,7 +30,7 @@ On first visit, you create an admin account. In production, restrict access to `
 
 ### Prometheus
 
-Metrics collection engine. Scrapes exporters every 15 seconds and stores time-series data with 30-day retention. Runs on the internal network only — not exposed through Caddy.
+Metrics collection engine. Scrapes exporters every 15 seconds, evaluates alert rules from `config/prometheus/alerts.yml`, and stores time-series data with 30-day retention. Runs on the internal network only — not exposed through Caddy.
 
 **Data:** Metrics persist in the `prometheus_data` volume.
 
@@ -51,15 +51,16 @@ Visualization layer for Prometheus metrics. Ships with a pre-provisioned **obox 
 
 ### Caddy
 
-Reverse proxy and TLS terminator. In production with a real domain, Caddy automatically provisions Let's Encrypt certificates. Routes:
+Reverse proxy and TLS terminator. Configured via a single site block `{$OBOX_DOMAIN:http://localhost}`: use `http://localhost` for local HTTP or a hostname (such as `llm.example.com`) for automatic Let's Encrypt HTTPS. Caddy injects security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`) and matches specific prefixes before falling back to Open WebUI so UI subpaths (`/_app/*`, `/api/*`, `/ws/*`) resolve cleanly:
 
 | Path | Target | Purpose |
 |------|--------|---------|
-| `/` | Open WebUI :8080 | Chat interface |
-| `/v1/*` | LiteLLM :4000 | OpenAI-compatible API |
-| `/portainer/*` | Portainer :9000 | Container management |
-| `/grafana/*` | Grafana :3000 | Monitoring dashboards |
 | `/health` | Caddy (static) | Health check |
+| `/v1/*` | LiteLLM :4000 | OpenAI-compatible API |
+| `/litellm/*` | LiteLLM :4000 | LiteLLM proxy (prefix stripped) |
+| `/portainer/*` | Portainer :9000 | Container management (`/portainer` redirects to `/portainer/`) |
+| `/grafana*` | Grafana :3000 | Monitoring dashboards |
+| `/*` (fallback) | Open WebUI :8080 | Chat interface and UI subpaths |
 
 ## Network
 
@@ -111,8 +112,8 @@ WebUI     LiteLLM   Portainer    Ollama
 
 The base `docker-compose.yml` defines the full stack. Override files layer on additional behavior:
 
-- **`docker-compose.gpu.yml`** — adds NVIDIA GPU device reservations to Ollama
-- **`docker-compose.dev.yml`** — disables Caddy, exposes services on localhost ports
+- **`docker-compose.gpu.yml`** — adds NVIDIA GPU device reservations to Ollama and launches `dcgm-exporter`
+- **`docker-compose.dev.yml`** — disables Caddy and binds service ports to `127.0.0.1` only
 
 Compose files are merged at runtime:
 

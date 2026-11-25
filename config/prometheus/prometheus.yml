@@ -2,6 +2,9 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+rule_files:
+  - /etc/prometheus/alerts.yml
+
 scrape_configs:
   # Prometheus self-monitoring
   - job_name: prometheus
@@ -44,13 +47,7 @@ scrape_configs:
       - target_label: __address__
         replacement: blackbox-exporter:9115
 
-  # NVIDIA GPU metrics (scraped when dcgm-exporter is running)
+  # NVIDIA GPU metrics (only active when running with docker-compose.gpu.yml)
   - job_name: nvidia-gpu
     static_configs:
       - targets: ["dcgm-exporter:9400"]
-    relabel_configs:
-      - source_labels: [__address__]
-        regex: (.+)
-        action: keep
-        # Drop target when exporter is not deployed (GPU override off)
-        # Prometheus will show the target as down — that's expected without GPU

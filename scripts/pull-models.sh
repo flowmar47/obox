@@ -23,7 +23,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
 if ! docker ps --format '{{.Names}}' | grep -q "^obox-ollama$"; then
-  echo "Error: obox-ollama container is not running. Start the stack first: ./scripts/setup.sh"
+  echo "Error: obox-ollama container is not running. Start the stack first: ./scripts/setup.sh" >&2
   exit 1
 fi
 
@@ -33,17 +33,18 @@ elif [[ -f "$ROOT_DIR/.env" ]]; then
   # shellcheck disable=SC1091
   source "$ROOT_DIR/.env"
   if [[ -z "${OLLAMA_MODELS:-}" ]]; then
-    echo "No models specified and OLLAMA_MODELS is empty in .env"
+    echo "No models specified and OLLAMA_MODELS is empty in .env" >&2
     exit 1
   fi
   IFS=',' read -ra MODELS <<< "$OLLAMA_MODELS"
 else
-  echo "No models specified. Pass model names or set OLLAMA_MODELS in .env"
+  echo "No models specified. Pass model names or set OLLAMA_MODELS in .env" >&2
   exit 1
 fi
 
 for model in "${MODELS[@]}"; do
-  model=$(echo "$model" | xargs)
+  model="${model#"${model%%[![:space:]]*}"}"
+  model="${model%"${model##*[![:space:]]}"}"
   [[ -z "$model" ]] && continue
   echo "Pulling ${model}..."
   docker exec obox-ollama ollama pull "$model"

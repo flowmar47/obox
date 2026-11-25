@@ -1,4 +1,4 @@
-.PHONY: help setup dev gpu stop health logs pull-models clean monitoring
+.PHONY: help setup dev gpu stop health logs pull-models clean env monitoring validate backup update status
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -6,7 +6,7 @@ help: ## Show this help
 setup: ## Start the stack (production mode)
 	./scripts/setup.sh
 
-dev: ## Start in development mode (direct ports, no TLS)
+dev: ## Start in development mode (direct 127.0.0.1 ports, no TLS)
 	OBOX_DEV=true ./scripts/setup.sh
 
 gpu: ## Start with GPU support
@@ -28,9 +28,21 @@ clean: ## Stop and remove all volumes (destructive)
 	./scripts/stop.sh
 	docker compose down -v
 
-env: ## Create .env from template
-	cp -n .env.example .env 2>/dev/null || true
-	@echo ".env ready — edit before production use"
+env: ## Create .env from template with generated secrets
+	./scripts/setup.sh --env-only
 
-monitoring: ## Open Grafana in browser (dev mode)
-	@echo "Grafana: http://localhost:3001/grafana (dev) or https://\$${OBOX_DOMAIN}/grafana"
+monitoring: ## Show Grafana URLs
+	@echo "Grafana (dev):  http://localhost:3001"
+	@echo "Grafana (prod): https://\$${OBOX_DOMAIN:-your-domain.com}/grafana/"
+
+validate: ## Run offline configuration and script validation
+	./scripts/validate.sh
+
+backup: ## Back up persistent volumes to ./backups/
+	./scripts/backup.sh
+
+update: ## Pull latest images and restart the stack
+	docker compose pull && ./scripts/setup.sh
+
+status: ## Show running container status
+	docker compose ps

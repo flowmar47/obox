@@ -1,7 +1,7 @@
 # obox — Development override (direct port access, no TLS)
 # Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 #
-# Exposes services directly on localhost for development without Caddy.
+# Exposes services on 127.0.0.1 only for local development without Caddy.
 
 services:
   caddy:
@@ -10,27 +10,27 @@ services:
 
   open-webui:
     ports:
-      - "3000:8080"
+      - "127.0.0.1:3000:8080"
 
   litellm:
     ports:
-      - "4000:4000"
+      - "127.0.0.1:4000:4000"
 
   portainer:
     ports:
-      - "9000:9000"
+      - "127.0.0.1:9000:9000"
 
   ollama:
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"
 
   grafana:
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
     environment:
       GF_SERVER_ROOT_URL: "http://localhost:3001/"
       GF_SERVER_SERVE_FROM_SUB_PATH: "false"
 
   prometheus:
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"

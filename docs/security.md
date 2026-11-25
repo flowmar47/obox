@@ -52,15 +52,19 @@ sudo ufw enable
 Add IP allowlisting in the Caddyfile for production:
 
 ```
-handle /portainer/* {
+handle_path /portainer/* {
     @blocked not remote_ip 10.0.0.0/8 192.168.0.0/16 YOUR_OFFICE_IP
     respond @blocked "Forbidden" 403
-    uri strip_prefix /portainer
     reverse_proxy portainer:9000
 }
 ```
 
-Apply the same pattern to `/grafana` — it exposes infrastructure metrics and should not be public without strong authentication.
+Apply the same pattern to `/grafana*` — it exposes infrastructure metrics and should not be public without strong authentication.
+
+### Security Headers & Local Development Binding
+
+- Caddy sets `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, and `Referrer-Policy: strict-origin-when-cross-origin` on all proxied responses.
+- `docker-compose.dev.yml` binds all exposed service ports exclusively to `127.0.0.1` so dev services are never reachable on LAN or public interfaces.
 
 ### VPN Access
 
@@ -82,7 +86,9 @@ For custom certificates, mount them into the Caddy container and update the Cadd
 
 ## Secrets Management
 
-### Generate Secure Values
+`./scripts/setup.sh` automatically generates unique random secrets for `WEBUI_SECRET_KEY`, `LITELLM_MASTER_KEY`, `GRAFANA_ADMIN_PASSWORD`, `WEBUI_ADMIN_PASSWORD`, and `PORTAINER_ADMIN_PASSWORD`, and sets `.env` permissions to `600`.
+
+### Generate Secure Values Manually
 
 ```bash
 # WebUI secret key
@@ -184,5 +190,5 @@ Before going to production:
 - [ ] Grafana admin password set (not default)
 - [ ] `GRAFANA_ROOT_URL` matches production URL
 - [ ] Image versions pinned
-- [ ] Backups configured for `webui_data` and `ollama_data` volumes
+- [ ] Backups configured (`./scripts/backup.sh` for `webui_data`, `grafana_data`, `portainer_data`, plus `ollama_data`)
 - [ ] Monitoring in place

@@ -45,28 +45,28 @@ docker compose version
 ```bash
 git clone https://github.com/flowmar47/obox.git
 cd obox
-cp .env.example .env
+./scripts/setup.sh --env-only
 ```
 
-Edit `.env` with your settings:
+`setup.sh` copies `.env.example` to `.env`, generates unique random secrets for `WEBUI_SECRET_KEY`, `LITELLM_MASTER_KEY`, `GRAFANA_ADMIN_PASSWORD`, `WEBUI_ADMIN_PASSWORD`, and `PORTAINER_ADMIN_PASSWORD`, and sets `chmod 600 .env`.
+
+Edit `.env` with your production settings:
 
 ```env
-# Required for production
+# Use "http://localhost" for local HTTP or "your-domain.com" (no scheme) for automatic HTTPS
 OBOX_DOMAIN=llm.example.com
 OBOX_ACME_EMAIL=admin@example.com
-
-# Security — generate with: openssl rand -hex 32
-WEBUI_SECRET_KEY=<generated-secret>
-LITELLM_MASTER_KEY=sk-obox-<generated-key>
+GRAFANA_ROOT_URL=https://llm.example.com/grafana/
 
 # Disable public signup
 WEBUI_ENABLE_SIGNUP=false
 WEBUI_ADMIN_EMAIL=admin@example.com
-WEBUI_ADMIN_PASSWORD=<strong-password>
 
 # Models to install
 OLLAMA_MODELS=llama3.2:3b,phi3:mini
 ```
+
+> Note: `WEBUI_ADMIN_PASSWORD` and `PORTAINER_ADMIN_PASSWORD` are generated in `.env` as reference credentials to use when creating your initial admin accounts in the UI.
 
 ### 3. DNS Configuration
 
@@ -107,14 +107,16 @@ OBOX_GPU=true ./scripts/setup.sh
 ### 6. Verify
 
 ```bash
-./scripts/healthcheck.sh
+./scripts/validate.sh     # offline config and script checks
+./scripts/healthcheck.sh  # live container and endpoint checks
 ```
 
 Visit your domain:
 
 - `https://llm.example.com` — Open WebUI
 - `https://llm.example.com/v1/models` — API (with auth header)
-- `https://llm.example.com/portainer` — Container management
+- `https://llm.example.com/portainer/` — Container management
+- `https://llm.example.com/grafana/` — Monitoring dashboards
 
 ### 7. Initial Configuration
 
@@ -187,9 +189,13 @@ Navigate to Settings → Models → Pull Model, enter the model name.
 
 Add to `config/litellm/config.yaml` for a friendly alias, or use the catch-all `*` route which passes any name to Ollama directly.
 
-## Updating
+## Updating & Backups
 
 ```bash
+# Back up webui_data, grafana_data, and portainer_data to ./backups/
+./scripts/backup.sh
+
+# Pull latest images and restart
 ./scripts/stop.sh
 docker compose pull
 ./scripts/setup.sh

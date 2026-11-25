@@ -18,14 +18,21 @@ check_container() {
   local name="$1"
   if docker ps --format '{{.Names}}' | grep -q "^${name}$"; then
     local status
-    status=$(docker inspect --format='{{.State.Health.Status}}' "$name" 2>/dev/null || echo "running")
-    if [[ "$status" == "healthy" || "$status" == "running" || "$status" == "<no value>" ]]; then
-      echo -e "  ${GREEN}✓${NC} ${name} (${status})"
-      PASS=$((PASS + 1))
-    else
-      echo -e "  ${YELLOW}~${NC} ${name} (${status})"
-      PASS=$((PASS + 1))
-    fi
+    status=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$name" 2>/dev/null || echo "running")
+    case "$status" in
+      healthy|running|"<no value>"|"")
+        echo -e "  ${GREEN}✓${NC} ${name} (${status})"
+        PASS=$((PASS + 1))
+        ;;
+      unhealthy|exited|dead)
+        echo -e "  ${RED}✗${NC} ${name} (${status})"
+        FAIL=$((FAIL + 1))
+        ;;
+      *)
+        echo -e "  ${YELLOW}~${NC} ${name} (${status})"
+        PASS=$((PASS + 1))
+        ;;
+    esac
   else
     echo -e "  ${RED}✗${NC} ${name} (not running)"
     FAIL=$((FAIL + 1))
@@ -35,7 +42,13 @@ check_container() {
 check_endpoint() {
   local url="$1"
   local label="$2"
-  if curl -sf --max-time 5 "$url" &>/dev/null; then
+  local auth_header="${3:-}"
+  local curl_args=(-sf --max-time 5)
+  if [[ -n "$auth_header" ]]; then
+    curl_args+=(-H "$auth_header")
+  fi
+
+  if curl "${curl_args[@]}" "$url" &>/dev/null; then
     echo -e "  ${GREEN}✓${NC} ${label} (${url})"
     PASS=$((PASS + 1))
   else
@@ -44,11 +57,24 @@ check_endpoint() {
   fi
 }
 
+base_url_from_domain() {
+  local domain="${1:-http://localhost}"
+  if [[ "$domain" == http://* || "$domain" == https://* ]]; then
+    printf '%s' "${domain%/}"
+  elif [[ "$domain" == "localhost" || "$domain" == "127.0.0.1" ]]; then
+    printf 'http://%s' "$domain"
+  else
+    printf 'https://%s' "$domain"
+  fi
+}
+
 echo "obox health check"
 echo "================="
 echo ""
 echo "Containers:"
-check_container "obox-caddy"
+if [[ "${OBOX_DEV:-false}" != "true" ]]; then
+  check_container "obox-caddy"
+fi
 check_container "obox-ollama"
 check_container "obox-webui"
 check_container "obox-litellm"
@@ -57,6 +83,10 @@ check_container "obox-prometheus"
 check_container "obox-grafana"
 check_container "obox-cadvisor"
 check_container "obox-node-exporter"
+check_container "obox-blackbox"
+if [[ "${OBOX_GPU:-false}" == "true" ]]; then
+  check_container "obox-dcgm-exporter"
+fi
 
 echo ""
 echo "Endpoints:"
@@ -73,10 +103,14 @@ else
     # shellcheck disable=SC1091
     source .env
   fi
-  DOMAIN="${OBOX_DOMAIN:-localhost}"
-  check_endpoint "http://${DOMAIN}/health" "Caddy proxy"
-  check_endpoint "http://${DOMAIN}/grafana/api/health" "Grafana"
-  check_endpoint "http://${DOMAIN}/v1/models" "LiteLLM API" || true
+  BASE_URL="$(base_url_from_domain "${OBOX_DOMAIN:-http://localhost}")"
+  check_endpoint "${BASE_URL}/health" "Caddy proxy"
+  check_endpoint "${BASE_URL}/grafana/api/health" "Grafana"
+  if [[ -n "${LITELLM_MASTER_KEY:-}" ]]; then
+    check_endpoint "${BASE_URL}/v1/models" "LiteLLM API" "Authorization: Bearer ${LITELLM_MASTER_KEY}"
+  else
+    check_endpoint "${BASE_URL}/litellm/health/liveliness" "LiteLLM API"
+  fi
 fi
 
 echo ""

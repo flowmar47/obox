@@ -63,7 +63,7 @@ Configured in `config/prometheus/prometheus.yml`:
 - `cadvisor` — container metrics
 - `litellm` — API request metrics at `/metrics`
 - `blackbox-http` — uptime probes for core services
-- `nvidia-gpu` — GPU metrics (target down on CPU-only hosts)
+- `nvidia-gpu` — GPU metrics (active when running with `docker-compose.gpu.yml`)
 
 ### Adding Custom Dashboards
 
@@ -76,28 +76,16 @@ To import community dashboards in Grafana:
    - **1860** — Node Exporter Full
    - **14282** — Docker cAdvisor
 
-### Adding Alerts (Optional)
+### Alert Rules
 
-Prometheus supports alerting rules. To add them:
+Prometheus loads alert rules from `config/prometheus/alerts.yml` (mounted at `/etc/prometheus/alerts.yml`):
 
-1. Create `config/prometheus/alerts.yml`
-2. Add a `rule_files` entry in `prometheus.yml`
-3. Optionally deploy Alertmanager for notifications
+- `ServiceDown` — blackbox HTTP probe failing for 2 minutes
+- `HighHostMemory` — host memory usage above 85% for 5 minutes
+- `HighDiskUsage` — root disk usage above 85% for 5 minutes
+- `HighGPUMemory` — GPU framebuffer usage above 90% for 5 minutes
 
-Example alert rule:
-
-```yaml
-groups:
-  - name: obox
-    rules:
-      - alert: ServiceDown
-        expr: probe_success{job="blackbox-http"} == 0
-        for: 2m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Service {{ $labels.instance }} is down"
-```
+You can extend `config/prometheus/alerts.yml` or attach Alertmanager if you want external notifications.
 
 ## GPU Monitoring
 
