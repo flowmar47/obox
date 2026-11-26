@@ -1,5 +1,7 @@
 # obox
 
+[![CI](https://github.com/flowmar47/obox/actions/workflows/ci.yml/badge.svg)](https://github.com/flowmar47/obox/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **Remote LLM server** — self-hosted AI inference with a web UI, OpenAI-compatible API, and Docker management via Portainer.
 
 ```
